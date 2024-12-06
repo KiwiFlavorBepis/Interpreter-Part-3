@@ -5,7 +5,7 @@ import java.util.List;
 // From Crafting Interpreters
 public class SpartieParser {
     private static class ParseError extends RuntimeException {}
-    private List<Token> tokens;
+    private final List<Token> tokens;
     private int current = 0;
 
     public SpartieParser(List<Token> tokens) {
@@ -54,26 +54,16 @@ public class SpartieParser {
         consume(TokenType.LEFT_PAREN, "Missing '(' after 'for'.");
 
         Statement initializer;
-        if (match(TokenType.SEMICOLON)) {
-            initializer = null;
-        }
-        else if (match(TokenType.VAR)) {
-            initializer = variableDeclaration();
-        }
-        else {
-            initializer = expressionStatement();
-        }
+        if (match(TokenType.SEMICOLON)) initializer = null;
+        else if (match(TokenType.VAR))  initializer = variableDeclaration();
+        else                            initializer = expressionStatement();
 
         Expression condition = null;
-        if (!check(TokenType.SEMICOLON)) {
-            condition = expression();
-        }
+        if (!check(TokenType.SEMICOLON)) condition = expression();
         consume(TokenType.SEMICOLON, "Expect ';' after for condition.");
 
         Expression increment = null;
-        if (!check(TokenType.RIGHT_PAREN)) {
-            increment = expression();
-        }
+        if (!check(TokenType.RIGHT_PAREN)) increment = expression();
         consume(TokenType.RIGHT_PAREN, "Expect ')' after for condition.");
         Statement body = statement(); //Returns a Statement.BlockStatement
 
@@ -267,10 +257,10 @@ public class SpartieParser {
     }
 
     private Expression primary() {
-        if (match(TokenType.IDENTIFIER)) return new Expression.VariableExpression(previous());
-        if (match(TokenType.FALSE)) return new Expression.LiteralExpression(false);
-        if (match(TokenType.TRUE)) return new Expression.LiteralExpression(true);
-        if (match(TokenType.NULL)) return new Expression.LiteralExpression(null);
+        if (match(TokenType.IDENTIFIER))    return new Expression.VariableExpression(previous());
+        if (match(TokenType.FALSE))         return new Expression.LiteralExpression(false);
+        if (match(TokenType.TRUE))          return new Expression.LiteralExpression(true);
+        if (match(TokenType.NULL))          return new Expression.LiteralExpression(null);
 
         if (match(TokenType.NUMBER, TokenType.STRING)) {
             return new Expression.LiteralExpression(previous().literal);

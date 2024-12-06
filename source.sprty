@@ -1,3 +1,5 @@
-// You got this!
-var a = 5;
-print a;
+var i = 0;
+while (i < 5) {
+  print "Incrementing i: " + i;
+  i = i + 1;
+}

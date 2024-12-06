@@ -149,14 +149,18 @@ public class SpartieInterpreter {
 
         // Handle unique case with add operator that can be applied to Strings and Doubles
         if (expression.operator.type == TokenType.ADD) {
-            //String + String concatenation
-            if (left instanceof String && right instanceof String) return (String) left + (String) right;
-            //Concatenate string with double as string
-            if ((left instanceof String || right instanceof String) && (left instanceof Double || right instanceof Double)) {
-                    //Left is double
-                    if (left instanceof Double) return String.format("%.2f%s", (Double)left, (String)right);
-                    //Right is double
-                    else return String.format("%s%.2f", (String)left, (Double)right);
+            if (left instanceof Double && right instanceof Double) {
+                return (double) left + (double) right;
+            } else if (left instanceof String && right instanceof String) {
+                return (String) left + (String) right;
+            }
+            else if ((left instanceof String || right instanceof String) && (left instanceof Double || right instanceof Double)) {
+                if (left instanceof Double) {
+                    return String.format("%.2f%s", (Double)left, (String)right);
+                }
+                else {
+                    return String.format("%s%.2f", (String)left, (Double)right);
+                }
             }
         }
 
@@ -171,17 +175,24 @@ public class SpartieInterpreter {
         // If we ge this far, then validate operands
         validateOperands(expression.operator, left, right);
 
-        return switch (expression.operator.type) {
-            case SUBTRACT       -> (double) left +  (double) right;
-            case MULTIPLY       -> (double) left *  (double) right;
-            case DIVIDE         -> (double) left /  (double) right;
-            case GREATER_THAN   -> (double) left >  (double) right;
-            case GREATER_EQUAL  -> (double) left >= (double) right;
-            case LESS_THAN      -> (double) left <  (double) right;
-            case LESS_EQUAL     -> (double) left <= (double) right;
-            default -> null;
-        };
+        switch(expression.operator.type) {
+            case SUBTRACT:
+                return (double)left - (double)right;
+            case MULTIPLY:
+                return (double)left * (double)right;
+            case DIVIDE:
+                return (double)left / (double)right;
+            case GREATER_THAN:
+                return (double)left > (double)right;
+            case GREATER_EQUAL:
+                return (double)left >= (double)right;
+            case LESS_THAN:
+                return (double)left < (double)right;
+            case LESS_EQUAL:
+                return (double)left <= (double)right;
+        }
 
+        return null;
     }
 
     // Helper Methods
