@@ -23,13 +23,13 @@ public class SpartieInterpreter {
 
     private Object interpret(Expression expression) {
         return switch (expression) {
-            case Expression.LogicalExpression logicalExpression -> interpretLogical(logicalExpression);
-            case Expression.AssignmentExpression assignmentExpression -> interpretAssign(assignmentExpression);
-            case Expression.VariableExpression variableExpression -> interpretVariable(variableExpression);
-            case Expression.LiteralExpression literalExpression -> interpretLiteral(literalExpression);
-            case Expression.ParenthesesExpression parenthesesExpression -> interpretParenthesis(parenthesesExpression);
-            case Expression.UnaryExpression unaryExpression -> interpretUnary(unaryExpression);
-            case Expression.BinaryExpression binaryExpression -> interpretBinary(binaryExpression);
+            case Expression.LogicalExpression       logicalExpression     -> interpretLogical(logicalExpression);
+            case Expression.AssignmentExpression    assignmentExpression  -> interpretAssign(assignmentExpression);
+            case Expression.VariableExpression      variableExpression    -> interpretVariable(variableExpression);
+            case Expression.LiteralExpression       literalExpression     -> interpretLiteral(literalExpression);
+            case Expression.ParenthesesExpression   parenthesesExpression -> interpretParenthesis(parenthesesExpression);
+            case Expression.UnaryExpression         unaryExpression       -> interpretUnary(unaryExpression);
+            case Expression.BinaryExpression        binaryExpression      -> interpretBinary(binaryExpression);
             case null, default -> null;
         };
     }
@@ -37,10 +37,18 @@ public class SpartieInterpreter {
     // Statement Implementation
     private void interpretWhileStatement(Statement.WhileStatement statement) {
         // TODO: Evaluate the while statement based on the condition
+        Expression condition = statement.condition;
+        Statement body = statement.body;
+        if (isTrue(interpret(condition))) interpret(body);
     }
 
     private void interpretIfStatement(Statement.IfStatement statement) {
         // TODO: Evaluate the condition and then execute the appropriate branch
+        Expression condition = statement.condition;
+        Statement thenBranch = statement.thenBranch;
+        Statement elseBranch = statement.elseBranch;
+        if (isTrue(interpret(condition))) interpret(thenBranch);
+        else interpret(elseBranch);
     }
 
     private void interpretBlockStatement(Statement.BlockStatement statement) {
@@ -64,8 +72,8 @@ public class SpartieInterpreter {
     private void interpretPrintStatement(Statement.PrintStatement statement) {
         // First evaluate the expression
         Object value = interpret(statement.expression);
-
-        System.out.println(value.toString());
+        if (value != null) System.out.println(value);
+        else System.out.println("null");
     }
 
     private void interpretBlock(List<Statement> statements, Environment environment) {
@@ -84,32 +92,32 @@ public class SpartieInterpreter {
     private Object interpretLogical(Expression.LogicalExpression logicalExpression) {
         Object left = interpret(logicalExpression.left);
 
+        // Or
         if (logicalExpression.operator.type == TokenType.OR) {
-            // Short-circuit
-            if (isTrue(left)) {
-                return left;
-            }
+            // Short-circuit, no need to check right
+            if (isTrue(left)) return left;
         }
+        // And
         else {
-            if (!isTrue(left)) {
-                return left;
-            }
+            //
+            if (!isTrue(left)) return left;
         }
 
-        // If we make it this far, we need to evaluate right
+        // Expression value is now determined by right
         return interpret(logicalExpression.right);
     }
 
     private Object interpretAssign(Expression.AssignmentExpression expression) {
-        // TODO: Interpret the expression for the assignment and then assign it to our global environment,
-        //  then return the value
+        // Interpret the expression for the assignment and then assign it to our global environment, then return the value
+        Object value = interpret(expression.value);
+        globalEnvironment.assign(expression.name, value);
 
-        return null;
+        return value;
     }
 
     private Object interpretVariable(Expression.VariableExpression expression) {
-        // TODO: Return the value from our global environment
-        return null;
+        // Return the value from our global environment
+        return globalEnvironment.get(expression.name.text);
     }
 
     private Object interpretLiteral(Expression.LiteralExpression expression) {
@@ -124,15 +132,15 @@ public class SpartieInterpreter {
     private Object interpretUnary(Expression.UnaryExpression expression) {
         Object right = interpret(expression.right);
 
-        switch (expression.operator.type) {
-            case NOT:
-                return !isTrue(right);
-            case SUBTRACT:
+        return switch (expression.operator.type) {
+            case NOT -> !isTrue(right);
+            case SUBTRACT -> {
                 validateOperand(expression.operator, right);
-                return -(double)right;
-        }
+                yield -1 * (double) right;
+            }
+            default -> null;
+        };
 
-        return null;
     }
 
     private Object interpretBinary(Expression.BinaryExpression expression) {
@@ -141,21 +149,18 @@ public class SpartieInterpreter {
 
         // Handle unique case with add operator that can be applied to Strings and Doubles
         if (expression.operator.type == TokenType.ADD) {
-            if (left instanceof Double && right instanceof Double) {
-                return (double) left + (double) right;
-            } else if (left instanceof String && right instanceof String) {
-                return (String) left + (String) right;
-            }
-            else if ((left instanceof String || right instanceof String) && (left instanceof Double || right instanceof Double)) {
-                if (left instanceof Double) {
-                    return String.format("%.2f%s", (Double)left, (String)right);
-                }
-                else {
-                    return String.format("%s%.2f", (String)left, (Double)right);
-                }
+            //String + String concatenation
+            if (left instanceof String && right instanceof String) return (String) left + (String) right;
+            //Concatenate string with double as string
+            if ((left instanceof String || right instanceof String) && (left instanceof Double || right instanceof Double)) {
+                    //Left is double
+                    if (left instanceof Double) return String.format("%.2f%s", (Double)left, (String)right);
+                    //Right is double
+                    else return String.format("%s%.2f", (String)left, (Double)right);
             }
         }
 
+        // Handle equivalencies
         switch(expression.operator.type) {
             case EQUIVALENT:
                 return isEquivalent(left, right);
@@ -166,55 +171,54 @@ public class SpartieInterpreter {
         // If we ge this far, then validate operands
         validateOperands(expression.operator, left, right);
 
-        switch(expression.operator.type) {
-            case SUBTRACT:
-                return (double)left + (double)right;
-            case MULTIPLY:
-                return (double)left * (double)right;
-            case DIVIDE:
-                return (double)left / (double)right;
-            case GREATER_THAN:
-                return (double)left > (double)right;
-            case GREATER_EQUAL:
-                return (double)left >= (double)right;
-            case LESS_THAN:
-                return (double)left < (double)right;
-            case LESS_EQUAL:
-                return (double)left <= (double)right;
-        }
+        return switch (expression.operator.type) {
+            case SUBTRACT       -> (double) left +  (double) right;
+            case MULTIPLY       -> (double) left *  (double) right;
+            case DIVIDE         -> (double) left /  (double) right;
+            case GREATER_THAN   -> (double) left >  (double) right;
+            case GREATER_EQUAL  -> (double) left >= (double) right;
+            case LESS_THAN      -> (double) left <  (double) right;
+            case LESS_EQUAL     -> (double) left <= (double) right;
+            default -> null;
+        };
 
-        return null;
     }
 
     // Helper Methods
 
     // Test equivalency
     private boolean isEquivalent(Object left, Object right) {
-        // They are equal under the following conditions:
-        // 1. They are both null
-        // 2. The equals method returns true (String or Double)
-
-        // We have to account a NPE
+        // Both values are null is equivalent
         if (left == null && right == null) return true;
+        // One value is null is not equivalent
         if (left == null || right == null) return false;
-
+        // Return .equals() equivalency
         return left.equals(right);
     }
 
     // False is literal false or null
     private boolean isTrue(Object object) {
+        // Null is falsy
         if (object == null) return false;
-        if (object instanceof Boolean) return (boolean)object;
+        // Return value if it's a boolean
+        if (object instanceof Boolean) return (boolean) object;
+        // Anything else is truthy
         return true;
     }
 
     // Validate the type
     private void validateOperand(Token operator, Object operand) {
-        if (operand instanceof Double) return;
+        // Not is only for booleans
+        if (operator.type == TokenType.NOT      && operand instanceof Boolean)  return;
+        // Negative (subtract) is only for doubles
+        if (operator.type == TokenType.SUBTRACT && operand instanceof Double)   return;
+        // No other possibilities, error
         error("Invalid type on line " + operator.line + " : " + operator.text + operand);
     }
 
+    // Validate the types
     private void validateOperands(Token operator, Object operand1, Object operand2) {
+        // Function is only used for validating math between two numbers
         if (operand1 instanceof Double && operand2 instanceof Double) return;
         error("Invalid type on line " + operator.line + " : " + operand1 + operator.text + operand2);
     }
