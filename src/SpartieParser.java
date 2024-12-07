@@ -1,5 +1,4 @@
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 // From Crafting Interpreters
@@ -67,24 +66,19 @@ public class SpartieParser {
         consume(TokenType.RIGHT_PAREN, "Expect ')' after for condition.");
         Statement body = statement(); //Returns a Statement.BlockStatement
 
-        // TODO: We have the initializer, we have the condition, we have the increment. Take those components
-        //  and convert into while loop. Hint: Build a block statement and then a while statement using the condition.
+        // We have the initializer, we have the condition, we have the increment. Take those components and convert into while loop.
 
-        List<Statement> statements = new ArrayList<>(); // Statements to go in block
+        // Statements to go in block wrapping everything
+        List<Statement> statements = new ArrayList<>();
 
-        statements.add(initializer); // Start with initializer
-        Statement.BlockStatement test = (Statement.BlockStatement) body;// Add increment to body
-        test.statements.add(new Statement.ExpressionStatement(increment));
-        statements.add(new Statement.WhileStatement(condition, test));
+        // Start with initializer
+        statements.add(initializer);
+        // Add increment to the end of the body statement
+        ((Statement.BlockStatement) body).statements.add(new Statement.ExpressionStatement(increment));
+        statements.add(new Statement.WhileStatement(condition, body));
 
         // Wrap in block
-        Statement block = new Statement.BlockStatement(statements);
-
-
-
-
-        return block;
-
+        return new Statement.BlockStatement(statements);
     }
 
     private Statement whileStatement() {
@@ -96,6 +90,7 @@ public class SpartieParser {
 
         return new Statement.WhileStatement(condition, body);
     }
+
     private Statement ifStatement() {
         consume(TokenType.LEFT_PAREN, "Missing '(' after 'if'.");
         Expression condition = expression();

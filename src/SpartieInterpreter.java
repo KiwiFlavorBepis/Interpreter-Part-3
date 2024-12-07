@@ -11,14 +11,14 @@ public class SpartieInterpreter {
 
     private void interpret(Statement statement) {
         switch(statement) {
-            case Statement.PrintStatement printStatement ->  interpretPrintStatement(printStatement);
-            case Statement.ExpressionStatement expressionStatement -> interpretExpressionStatement(expressionStatement);
-            case Statement.VariableStatement variableStatement -> interpretVariableStatement(variableStatement);
-            case Statement.BlockStatement blockStatement -> interpretBlockStatement(blockStatement);
-            case Statement.IfStatement ifStatement -> interpretIfStatement(ifStatement);
-            case Statement.WhileStatement whileStatement -> interpretWhileStatement(whileStatement);
+            case Statement.PrintStatement printStatement ->             interpretPrintStatement(printStatement);
+            case Statement.ExpressionStatement expressionStatement ->   interpretExpressionStatement(expressionStatement);
+            case Statement.VariableStatement variableStatement ->       interpretVariableStatement(variableStatement);
+            case Statement.BlockStatement blockStatement ->             interpretBlockStatement(blockStatement);
+            case Statement.IfStatement ifStatement ->                   interpretIfStatement(ifStatement);
+            case Statement.WhileStatement whileStatement ->             interpretWhileStatement(whileStatement);
             case null, default -> {}
-        };
+        }
     }
 
     private Object interpret(Expression expression) {
@@ -36,17 +36,21 @@ public class SpartieInterpreter {
 
     // Statement Implementation
     private void interpretWhileStatement(Statement.WhileStatement statement) {
-        // TODO: Evaluate the while statement based on the condition
         Expression condition = statement.condition;
         Statement body = statement.body;
-        if (isTrue(interpret(condition))) interpret(body);
+
+        if (isTrue(interpret(condition))) {
+            interpret(body);
+            interpretWhileStatement(statement);
+        }
     }
 
     private void interpretIfStatement(Statement.IfStatement statement) {
-        // TODO: Evaluate the condition and then execute the appropriate branch
+        // Evaluate the condition and then execute the appropriate branch
         Expression condition = statement.condition;
         Statement thenBranch = statement.thenBranch;
         Statement elseBranch = statement.elseBranch;
+
         if (isTrue(interpret(condition))) interpret(thenBranch);
         else interpret(elseBranch);
     }
@@ -57,10 +61,10 @@ public class SpartieInterpreter {
 
     private void interpretVariableStatement(Statement.VariableStatement statement) {
         Object value = null;
-        if (statement.initializer != null) {
-            // Evaluate the variable assignment expression
-            value = interpret(statement.initializer);
-        }
+
+        // If the initializer is provided, evaluate the variable assignment expression
+        if (statement.initializer != null) value = interpret(statement.initializer);
+
         globalEnvironment.define(statement.name.text, value);
     }
 
@@ -72,6 +76,7 @@ public class SpartieInterpreter {
     private void interpretPrintStatement(Statement.PrintStatement statement) {
         // First evaluate the expression
         Object value = interpret(statement.expression);
+
         if (value != null) System.out.println(value);
         else System.out.println("null");
     }
@@ -81,9 +86,7 @@ public class SpartieInterpreter {
         Environment previous = globalEnvironment;
 
         globalEnvironment = environment;
-        for (Statement statement : statements) {
-            interpret(statement);
-        }
+        for (Statement statement : statements) interpret(statement);
 
         // Restore environment
         globalEnvironment = previous;
@@ -97,12 +100,14 @@ public class SpartieInterpreter {
             // Short-circuit, no need to check right
             if (isTrue(left)) return left;
         }
-        // And
+
+        // And (the only other possible logical operator
         else {
-            //
+            // Check left first
             if (!isTrue(left)) return left;
         }
 
+        //Or or And
         // Expression value is now determined by right
         return interpret(logicalExpression.right);
     }
@@ -135,12 +140,12 @@ public class SpartieInterpreter {
         return switch (expression.operator.type) {
             case NOT -> !isTrue(right);
             case SUBTRACT -> {
+                // Need to validate right first
                 validateOperand(expression.operator, right);
                 yield -1 * (double) right;
             }
             default -> null;
         };
-
     }
 
     private Object interpretBinary(Expression.BinaryExpression expression) {
@@ -149,19 +154,16 @@ public class SpartieInterpreter {
 
         // Handle unique case with add operator that can be applied to Strings and Doubles
         if (expression.operator.type == TokenType.ADD) {
-            if (left instanceof Double && right instanceof Double) {
-                return (double) left + (double) right;
-            } else if (left instanceof String && right instanceof String) {
-                return (String) left + (String) right;
-            }
-            else if ((left instanceof String || right instanceof String) && (left instanceof Double || right instanceof Double)) {
-                if (left instanceof Double) {
-                    return String.format("%.2f%s", (Double)left, (String)right);
-                }
-                else {
-                    return String.format("%s%.2f", (String)left, (Double)right);
-                }
-            }
+            // Addition of Doubles
+            if (left instanceof Double && right instanceof Double) return (double) left + (double) right;
+
+            // Concatenation of Strings
+            if (left instanceof String && right instanceof String) return left + (String) right;
+
+            // Concatenation of String and Double, the only remaining possibility
+            // Left is Double
+            if (left instanceof Double) return String.format("%.2f%s", (Double)left, right);
+            else                        return String.format("%s%.2f", left, (Double)right);
         }
 
         // Handle equivalencies
@@ -175,24 +177,17 @@ public class SpartieInterpreter {
         // If we ge this far, then validate operands
         validateOperands(expression.operator, left, right);
 
-        switch(expression.operator.type) {
-            case SUBTRACT:
-                return (double)left - (double)right;
-            case MULTIPLY:
-                return (double)left * (double)right;
-            case DIVIDE:
-                return (double)left / (double)right;
-            case GREATER_THAN:
-                return (double)left > (double)right;
-            case GREATER_EQUAL:
-                return (double)left >= (double)right;
-            case LESS_THAN:
-                return (double)left < (double)right;
-            case LESS_EQUAL:
-                return (double)left <= (double)right;
-        }
+        return switch (expression.operator.type) {
+            case SUBTRACT       ->  (double) left -  (double) right;
+            case MULTIPLY       ->  (double) left *  (double) right;
+            case DIVIDE         ->  (double) left /  (double) right;
+            case GREATER_THAN   ->  (double) left >  (double) right;
+            case GREATER_EQUAL  ->  (double) left >= (double) right;
+            case LESS_THAN      ->  (double) left <  (double) right;
+            case LESS_EQUAL     ->  (double) left <= (double) right;
+            default -> null;
+        };
 
-        return null;
     }
 
     // Helper Methods

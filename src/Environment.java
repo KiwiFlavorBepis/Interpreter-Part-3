@@ -11,7 +11,7 @@ public class Environment {
         this.enclosing = enclosing;
     }
 
-    private Map<String, Object> variables = new HashMap<>();
+    private final Map<String, Object> variables = new HashMap<>();
 
     // Define - Create a variable
     void define(String name, Object value) {
@@ -20,11 +20,8 @@ public class Environment {
 
     Object get(String name) {
         // Return variable if it exists in our current environment, otherwise, check enclosing, otherwise, return null (it does not exist)
-        if (variables.containsKey(name)) {
-            return variables.get(name);
-        } else if (enclosing != null) {
-            return enclosing.get(name);
-        }
+        if (variables.containsKey(name))    return variables.get(name);
+        else if (enclosing != null)         return enclosing.get(name);
         return null;
     }
 
